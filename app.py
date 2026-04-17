@@ -100,18 +100,41 @@ def handle_message(msg: dict, value: dict):
     text = msg["text"]["body"].strip()
     logger.info(f"📨 Message from {sender}: {text[:80]}")
 
-    # Ignore auto-replies / bots
+    # Ignore auto-replies / OOO / spam bots
     AUTO_REPLY_KEYWORDS = [
+        # Generic auto-reply openers
         "merci d'avoir contacté", "merci de nous avoir contacté",
+        "merci de nous avoir contacts", "merci pour votre contact",
         "message automatique", "réponse automatique", "auto-reply",
-        "هذه رسالة تلقائية", "شكرا على تواصلك",
-        "we will get back to you", "this is an automated",
+        # Common endings that signal auto-reply
         "dites-nous en quoi nous pouvons vous aider",
+        "dites-nous comment nous pouvons vous aider",
         "nous vous répondrons dans les plus brefs délais",
-        "notre équipe vous contactera"
+        "nous vous répondrons au plus vite",
+        "nous ne sommes pas disponibles pour l'instant",
+        "je ne suis pas joignable pour l'instant",
+        "je ne suis pas disponible pour l'instant",
+        "souhaitez vous acheter ? vendre ? louer",
+        "nous vous souhaitons beaucoup de réussite",  # formal closing = bot
+        # Arabic auto-replies
+        "هذه رسالة تلقائية", "شكرا على تواصلك",
+        "مرحبا بكم", "شكراً لتواصلك معنا",
+        # English
+        "we will get back to you", "this is an automated",
+        "thank you for contacting",
+        # Spam / group invites
+        "chat.whatsapp.com", "whatsapp.com/invite",
+        "lien :", "rejoindre le groupe",
     ]
-    if any(kw in text.lower() for kw in AUTO_REPLY_KEYWORDS):
-        logger.info(f"🤖 Auto-reply detected from {sender}, ignoring.")
+    text_lower = text.lower()
+    if any(kw in text_lower for kw in AUTO_REPLY_KEYWORDS):
+        logger.info(f"🤖 Auto-reply/spam detected from {sender}, ignoring.")
+        wa.mark_read(msg_id)
+        return
+
+    # Skip very long messages (>400 chars) that look like bots/spam
+    if len(text) > 400 and "http" in text:
+        logger.info(f"🤖 Likely spam (long+url) from {sender}, ignoring.")
         wa.mark_read(msg_id)
         return
 
