@@ -100,6 +100,21 @@ def handle_message(msg: dict, value: dict):
     text = msg["text"]["body"].strip()
     logger.info(f"📨 Message from {sender}: {text[:80]}")
 
+    # Ignore auto-replies / bots
+    AUTO_REPLY_KEYWORDS = [
+        "merci d'avoir contacté", "merci de nous avoir contacté",
+        "message automatique", "réponse automatique", "auto-reply",
+        "هذه رسالة تلقائية", "شكرا على تواصلك",
+        "we will get back to you", "this is an automated",
+        "dites-nous en quoi nous pouvons vous aider",
+        "nous vous répondrons dans les plus brefs délais",
+        "notre équipe vous contactera"
+    ]
+    if any(kw in text.lower() for kw in AUTO_REPLY_KEYWORDS):
+        logger.info(f"🤖 Auto-reply detected from {sender}, ignoring.")
+        wa.mark_read(msg_id)
+        return
+
     # Mark as read
     wa.mark_read(msg_id)
 
@@ -147,7 +162,7 @@ def api_stats():
     """Return aggregate stats for the dashboard."""
     stats = memory.get_stats()
     stats["broadcast_total"] = BROADCAST_TOTAL
-    return jsonify(astats)
+    return jsonify(stats)
 
 
 @app.route("/api/conversations", methods=["GET"])
@@ -190,7 +205,7 @@ def _run_broadcast(contacts: list, template_name: str, delay: float):
                 _broadcast_status["sent"] += 1
             else:
                 _broadcast_status["failed"] += 1
-                logger.warning(f"⚟️ {phone}: {result}")
+                logger.warning(f"⚠️ {phone}: {result}")
         except Exception as e:
             _broadcast_status["failed"] += 1
             logger.error(f"❌ {phone}: {e}")
@@ -231,5 +246,5 @@ def api_broadcast_status():
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
-    logger.info(f"🚀Brocli bot starting on port {port}")
+    logger.info(f"🚀 Brocli bot starting on port {port}")
     app.run(host="0.0.0.0", port=port, debug=False)
