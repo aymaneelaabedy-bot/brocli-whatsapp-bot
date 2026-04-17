@@ -26,7 +26,7 @@ class ConversationMemory:
     def _load(self) -> dict:
         if os.path.exists(self.filepath):
             try:
-                with open(self.filepath, "r", encoding="utf-8")" as f:
+                with open(self.filepath, "r", encoding="utf-8") as f:
                     return json.load(f)
             except Exception as e:
                 logger.error(f"Failed to load memory: {e}")
@@ -45,7 +45,7 @@ class ConversationMemory:
             return self._data.get(phone, {}).get("messages", [])
 
     def add(self, phone: str, role: str, content: str):
-        """Append a message turn in the conversation history."""
+        """Append a message turn to the conversation history."""
         with self._lock:
             if phone not in self._data:
                 self._data[phone] = {
@@ -69,7 +69,7 @@ class ConversationMemory:
             self._data[phone]["booked"]     = True
             self._data[phone]["booked_at"]  = datetime.utcnow().isoformat()
             self._save()
-        logger.info(f"ðŽ¯ Lead marked as booked: {phone}")
+        logger.info(f"ðŸŽ¯ Lead marked as booked: {phone}")
 
     def is_booked(self, phone: str) -> bool:
         """Check if a lead has already been booked."""
