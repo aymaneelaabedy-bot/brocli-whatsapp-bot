@@ -61,15 +61,21 @@ class ConversationMemory:
             self._data[phone]["last_activity"] = datetime.utcnow().isoformat()
             self._save()
 
-    def mark_booked(self, phone: str):
-        """Mark a lead as booked."""
+    def mark_booked(self, phone: str, name: str = None, business: str = None, location: str = None):
+        """Mark a lead as booked with optional client details."""
         with self._lock:
             if phone not in self._data:
                 self._data[phone] = {"messages": [], "booked": False}
-            self._data[phone]["booked"]     = True
-            self._data[phone]["booked_at"]  = datetime.utcnow().isoformat()
+            self._data[phone]["booked"]    = True
+            self._data[phone]["booked_at"] = datetime.utcnow().isoformat()
+            if name:
+                self._data[phone]["client_name"] = name
+            if business:
+                self._data[phone]["business"] = business
+            if location:
+                self._data[phone]["location"] = location
             self._save()
-        logger.info(f"🎯 Lead marked as booked: {phone}")
+        logger.info(f"🎯 Lead booked: {phone} | {name} | {business} | {location}")
 
     def is_booked(self, phone: str) -> bool:
         """Check if a lead has already been booked."""
