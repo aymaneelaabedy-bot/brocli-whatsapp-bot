@@ -150,15 +150,20 @@ def handle_message(msg: dict, value: dict):
         return
 
     # Generate AI response
-    response, booked = agent.reply(text, history, sender)
+    response, booked, lead_info = agent.reply(text, history, sender)
 
     # Save to memory
     memory.add(sender, "user", text)
     memory.add(sender, "assistant", response)
 
     if booked:
-        memory.mark_booked(sender)
-        logger.info(f"🎉 LEAD BOOKED: {sender}")
+        memory.mark_booked(
+            sender,
+            name=lead_info.get("name"),
+            business=lead_info.get("business"),
+            location=lead_info.get("location")
+        )
+        logger.info(f"🎉 LEAD BOOKED: {sender} | {lead_info}")
 
     # Send response
     wa.send_text(sender, response)
