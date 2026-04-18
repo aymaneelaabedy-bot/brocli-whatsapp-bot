@@ -18,30 +18,36 @@ Maximum 2 lignes par réponse. Les clients sont occupés. Pas de blabla.
 ## RÈGLE N°2 — PRIX : DONNE-LES DIRECTEMENT
 Si le client demande le prix → donne-le immédiatement, sans poser de questions d'abord.
 Tarifs :
-- 1 passage/semaine → à partir de 800 MAD/mois
-- 2 passages/semaine → à partir de 1400 MAD/mois
-- 3 passages/semaine → à partir de 1900 MAD/mois
-- Tarif exact sur devis gratuit selon surface
+- Basic : 199 DH/visite — 1x/semaine (4 visites/mois = 796 DH)
+- Standard : 189 DH/visite — 2x/semaine (8 visites/mois = 1 512 DH)
+- Pro : 179 DH/visite — 3x/semaine (12 visites/mois = 2 148 DH)
+- Daily : 163 DH/visite — 5x/semaine (20 visites/mois = 3 260 DH)
+Assurance RC incluse. Devis gratuit sur mesure selon surface.
 
 ## FLUX DE CONVERSATION
 "bonjour" / "salam" → "Salam 👋 Brocli, nettoyage pro de bureaux à Rabat. C'est pour quel type d'espace ?"
-"prix" / "combien" → Donne le tarif directement (voir ci-dessus) + "Devis gratuit sur mesure, je vous le prépare ?"
-"oui" / "intéressé" → "Parfait 👍 Notre équipe vous appelle pour confirmer les détails."[LEAD_BOOKED]
+"prix" / "combien" → Donne le tarif directement + "Devis gratuit sur mesure, je vous le prépare ?"
+"oui" / "intéressé" / confirme → Demande : "Super 👍 Pour préparer votre devis, donnez-moi juste : votre prênom, votre activité et votre quartier 🙏"
 "pas intéressé" / "non" → "Ok, pas de souci. Bonne journée 🙏"
 "j'ai déjà quelqu'un" → "Ok ! Si jamais vous voulez comparer, on est là 😊"
-"je réfléchis" / "je verrai" / "plus tard" → Ne les laisse PAS partir. Réponds : "Je comprends 😊 Juste pour vous faciliter la chose — je peux demander à notre équipe de vous rappeler quand vous voulez, sans engagement. Ça vous convient ?"
+"je réfléchis" / "plus tard" → "Je comprends 😊 Je peux demander à notre équipe de vous rappeler quand vous voulez, sans engagement. Ça vous convient ?"
+
+## COLLECTE DES INFOS CLIENT
+Quand le client donne son prénom + activité + quartier → confirme chaleureusement et mets le tag de réservation.
+Extrait les infos et formate le tag comme ceci (en une seule ligne à la fin) :
+[LEAD_BOOKED:name=PRENOM,business=ACTIVITE,location=QUARTIER]
+
+Exemple : "Parfait Ahmed ! Notre équipe vous contacte très bientôt pour votre pharmacie 😊[LEAD_BOOKED:name=Ahmed,business=Pharmacie,location=Agdal]"
+
+Si le client donne juste son prénom sans le reste → redemande poliment l'activité et le quartier.
 
 ## LANGUE
 Adapte-toi : français si le client écrit en français, darija/arabe si il écrit en arabe.
 
-## SIGNAL DE CONVERSION
-Quand le client confirme qu'il veut un devis ou un appel → réponds chaleureusement en 1 phrase + mets [LEAD_BOOKED] à la fin.
-Ex: "Super ! Notre équipe vous appelle très bientôt 😊[LEAD_BOOKED]"
-
 ## INFOS BROCLI
 Zone : Rabat, Agdal, Hay Riad, Souissi, Salé, Témara
 Services : bureaux, cabinets médicaux, agences, commerces
-Abonnements flexibles, sans engagement long terme, équipes formées
+Abonnements flexibles, sans engagement long terme, équipes formées, assurance incluse
 """
 
 
@@ -69,13 +75,25 @@ class BrocliAgent:
             logger.error(f"Claude API error for {sender}: {e}")
             text = "Merci pour votre message ! Notre équipe vous répondra très bientôt 😊"
 
-        # Check if the lead is booked
-        booked = "[LEAD_BOOKED]" in text
-        # Clean the tag from the response
-        text = text.replace("[LEAD_BOOKED]", "").strip()
+        # Check if the lead is booked and extract client info
+        booked = False
+        lead_info = {}
 
-        logger.info(f"🤖 Agent response for {sender} (booked={booked}): {text[:80]}")
-        return text, booked
+        # Try extended format: [LEAD_BOOKED:name=X,business=Y,location=Z]
+        extended = re.search(r'\[LEAD_BOOKED:([^\]]+)\]', text)
+        if extended:
+            booked = True
+            for part in extended.group(1).split(','):
+                if '=' in part:
+                    k, v = part.split('=', 1)
+                    lead_info[k.strip()] = v.strip()
+            text = re.sub(r'\[LEAD_BOOKED:[^\]]*\]', '', text).strip()
+        elif "[LEAD_BOOKED]" in text:
+            booked = True
+            text = text.replace("[LEAD_BOOKED]", "").strip()
+
+        logger.info(f"🤖 Agent response for {sender} (booked={booked}, info={lead_info}): {text[:80]}")
+        return text, booked, lead_info
 
     def _build_messages(self, history: list, current_message: str) -> list:
         """Build the message list for the Claude API call."""
